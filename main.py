@@ -2,9 +2,10 @@
 
 Copies the pre-built editorial image (entry.png) to the grader's
 output directory as entry.png, then verifies the copy: it must be a
-whole PNG (correct magic bytes) and byte-identical to the source, so
-a corrupt or truncated asset fails loudly instead of being judged.
-Standard library only, no network.
+Whole PNG, byte-identical copy, and within the competition's size
+cap (at most 1 MiB), so a corrupt, truncated, or oversized asset
+fails loudly instead of being judged. Standard library only, no
+network.
 """
 
 import hashlib
@@ -13,6 +14,7 @@ import shutil
 from pathlib import Path
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+MAX_BYTES = 1_048_576
 
 
 def _sha256(path: Path) -> str:
@@ -31,6 +33,8 @@ def main() -> None:
         raise FileNotFoundError(f"missing image asset: {source}")
     if _head(source) != PNG_MAGIC:
         raise ValueError("entry.png is not a valid PNG file")
+    if source.stat().st_size > MAX_BYTES:
+        raise ValueError("entry.png exceeds the 1 MiB size cap")
 
     out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output")
     out_dir.mkdir(parents=True, exist_ok=True)
